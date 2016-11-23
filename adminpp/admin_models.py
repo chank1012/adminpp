@@ -1,7 +1,12 @@
+import sys
 from adminpp.builder import AdminBuilder
 
 
 class optional:
+    pass
+
+
+class auto:
     pass
 
 
@@ -97,6 +102,30 @@ class AdminModel(object):
         return self.Meta.model._default_manager.get_queryset()
 
 
+def create_proxy_model(model, proxy_name):
+    # This function call should be bypassed under migration commands
+    # because proxy model creates dummy migration files.
+    # (Not very clever, but it works)
+    if 'makemigrations' in sys.argv or 'migrate' in sys.argv:
+        return model
+
+    # http://stackoverflow.com/questions/2223375/multiple-modeladmins-views-for-same-model-in-django-admin
+    class Meta:
+        proxy = True
+        app_label = model._meta.app_label
+
+    attrs = {'__module__': '', 'Meta': Meta}
+    proxy_model = type(proxy_name, (model,), attrs)
+    return proxy_model
+
+
 def adminpp_register(site, admin_model):
     admin_class = AdminBuilder(admin_model).build()
-    site.register(admin_model.Meta.model, admin_class)
+    model = admin_model.Meta.model
+
+    # If Meta has proxy_name, use proxy model instead
+    proxy_name = getattr(admin_model.Meta, 'proxy_name', None)
+    if proxy_name is not None:
+        model = create_proxy_model(model, proxy_name)
+
+    site.register(model, admin_class)
