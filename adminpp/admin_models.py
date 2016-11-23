@@ -19,6 +19,11 @@ class BaseField(object):
         self._short_description = short_description
         self._source = source
 
+    def bind(self, name, admin_model):
+        self.name = name
+        self.admin_model = admin_model
+        self.model = admin_model.Meta.model
+
     @property
     def short_description(self):
         if self._short_description is not None:
@@ -51,21 +56,41 @@ class IntegerField(BaseField):
     pass
 
 
+class MethodField(BaseField):
+    def __init__(self, method_name=None, **kwargs):
+        self._method_name = method_name
+        super(MethodField, self).__init__(**kwargs)
+
+    @property
+    def method_name(self):
+        if self._method_name is not None:
+            return self._method_name
+        return 'get_{}'.format(self.name)
+
+    def render(self, obj):
+        method = getattr(self.admin_model, self.method_name)
+        return method(obj)
+
+
 class AdminModel(object):
     Meta = None
 
     def get_fields(self):
         fields = []
+        # Get pk field
+        model = self.Meta.model
+        field_object = IntegerField()
+        field_object.bind(model._meta.pk.name, self)
+        fields.append(field_object)
         # Get all fields declared at ModelAdmin class
         for attr_name in dir(self):
             attr = getattr(self, attr_name, None)
             if isinstance(attr, BaseField):
                 field_object = attr
-                # Append "model" and "name" info into field object
-                field_object.model = self.Meta.model
-                field_object.name = attr_name
+                # Bind "name" and "admin_model" info into field object
+                field_object.bind(attr_name, self)
                 # Append to result array
-                fields.append(attr)
+                fields.append(field_object)
         return fields
 
     def get_queryset(self):
