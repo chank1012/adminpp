@@ -1,6 +1,6 @@
 import os
 from setuptools import setup
-from qbase import VERSION
+from adminpp import VERSION
 
 here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, 'README.md')).read()
