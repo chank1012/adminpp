@@ -226,7 +226,7 @@ def create_proxy_model(model, proxy_name):
     return proxy_model
 
 
-def adminpp_register(site, admin_model):
+def register(site, admin_model):
     admin_class = AdminBuilder(admin_model).build()
     model = admin_model.Meta.model
 
@@ -236,3 +236,12 @@ def adminpp_register(site, admin_model):
         model = create_proxy_model(model, proxy_name)
 
     site.register(model, admin_class)
+
+
+def register_auto(site, model_class):
+    # Create AdminModel first
+    class AutoAdminModel(AdminModel):
+        class Meta:
+            model = model_class
+    # Register
+    register(site, AutoAdminModel)
