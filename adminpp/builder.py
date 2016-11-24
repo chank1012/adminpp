@@ -20,7 +20,8 @@ class AdminBuilder:
                     # "_getter" class implements "__call__" method,
                     # so it can behave like a get_something(self, obj) in ModelAdmin
                     def __call__(self, obj):
-                        return self.field.render(obj)
+                        value = self.field.get_value(obj)
+                        return self.field.render(value)
 
                     # Add some nice attributes
                     short_description = field.short_description

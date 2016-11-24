@@ -1,5 +1,8 @@
 import sys
+from django.db import models
 from adminpp.builder import AdminBuilder
+from adminpp.renderers import BasicFieldRenderer
+from adminpp.tags import Tag, VoidTag
 
 
 class optional:
@@ -10,17 +13,22 @@ class auto:
     pass
 
 
+default_renderer = BasicFieldRenderer()
+
+
 class BaseField(object):
     name = None  # name of the field (at AdminModel)
     model = None
 
     def __init__(self,
                  list_display=True,
-                 source=None,
-                 short_description=None):
+                 renderer=None,
+                 short_description=None,
+                 source=None):
         self.list_display = list_display
 
         # Set property objects
+        self._renderer = renderer
         self._short_description = short_description
         self._source = source
 
@@ -28,6 +36,12 @@ class BaseField(object):
         self.name = name
         self.admin_model = admin_model
         self.model = admin_model.Meta.model
+
+    @property
+    def renderer(self):
+        if self._renderer is None:
+            self._renderer = default_renderer
+        return self._renderer
 
     @property
     def short_description(self):
@@ -49,8 +63,11 @@ class BaseField(object):
         except:
             return None
 
-    def render(self, obj):
+    def get_value(self, obj):
         return getattr(obj, self.source)
+
+    def render(self, value):
+        return self.renderer.render_text(value)
 
 
 class CharField(BaseField):
@@ -59,6 +76,15 @@ class CharField(BaseField):
 
 class IntegerField(BaseField):
     pass
+
+
+class BaseTagField(BaseField):
+    pass
+
+
+class BooleanField(BaseTagField):
+    def render(self, value):
+        return self.renderer.render_boolean(value)
 
 
 class MethodField(BaseField):
@@ -72,13 +98,33 @@ class MethodField(BaseField):
             return self._method_name
         return 'get_{}'.format(self.name)
 
-    def render(self, obj):
+    def get_value(self, obj):
         method = getattr(self.admin_model, self.method_name)
         return method(obj)
 
 
+class ImageField(BaseTagField):
+    def render(self, value):
+        tag = VoidTag('img', src=value)
+        return self.renderer.render_text(tag)
+
+
+class DateTimeField(BaseField):
+    def render(self, value):
+        return str(value)
+
+
 class AdminModel(object):
     Meta = None
+
+    field_mapping = {
+        models.AutoField: IntegerField,
+        models.BooleanField: BooleanField,
+        models.CharField: CharField,
+        models.DateTimeField: DateTimeField,
+        models.ImageField: ImageField,
+        models.TextField: CharField,
+    }
 
     def get_fields(self):
         fields = []
@@ -100,6 +146,12 @@ class AdminModel(object):
 
     def get_queryset(self):
         return self.Meta.model._default_manager.get_queryset()
+
+
+class AutoAdminModel(AdminModel):
+    def get_fields(self):
+        model = self.Meta.model
+
 
 
 def create_proxy_model(model, proxy_name):
