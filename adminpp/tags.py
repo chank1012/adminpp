@@ -59,6 +59,7 @@ class Tag(TagBase):
                                 self.render_kwargs(),
                                 self.render_body())
 
+
 class VoidTag(TagBase):
     def render(self):
         return html.format_html('<{0}{1} />',

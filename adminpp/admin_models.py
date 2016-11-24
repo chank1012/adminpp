@@ -104,18 +104,55 @@ class MethodField(BaseField):
 
 
 class ImageField(BaseTagField):
+    # TODO
     def render(self, value):
         tag = VoidTag('img', src=value)
         return self.renderer.render_text(tag)
 
 
 class DateTimeField(BaseField):
+    # TODO
     def render(self, value):
         return str(value)
 
 
+class AdminModelMeta(type):
+    """
+    This metaclass will make AdminModel.Meta inherit all variables from parent.
+    Reference code for metaclass:
+     https://github.com/django/django/blob/1.10.3/django/db/models/base.py#L82
+    """
+
+    def __new__(cls, name, bases, attrs):
+        super_new = super(AdminModelMeta, cls).__new__
+
+        # Also ensure initialization is only performed for subclasses of AdminModel
+        # (excluding AdminModel class itself)
+        parents = [b for b in bases if isinstance(b, AdminModelMeta)]
+        if not parents:
+            return super_new(cls, name, bases, attrs)
+
+        if 'Meta' not in attrs:
+            raise RuntimeError("'class Meta' must be defined at ({})".format(name))
+
+        # Create the class
+        new_class = super_new(cls, name, bases, attrs)
+        new_meta = attrs.pop('Meta', None)
+
+        # Construct Meta
+        parent_class = filter(lambda c: issubclass(c, AdminModel), bases)[0]
+        parent_meta = parent_class.Meta
+        for attr_name in dir(parent_meta):
+            # If parent.Meta has attributes that new.Meta doesn't have,
+            # append it to new.Meta
+            if attr_name not in dir(new_meta):
+                setattr(new_meta, attr_name, getattr(parent_meta, attr_name))
+
+        return new_class
+
+
 class AdminModel(object):
-    Meta = None
+    __metaclass__ = AdminModelMeta
 
     field_mapping = {
         models.AutoField: IntegerField,
@@ -126,32 +163,45 @@ class AdminModel(object):
         models.TextField: CharField,
     }
 
+    class Meta:
+        list_display = auto
+        search_fields = auto
+
+    def get_mapped_field(self, model_field):
+        # Given django.Model field, find appropriate admin_models.Field class
+        if model_field.__class__ in self.field_mapping:
+            return self.field_mapping[model_field.__class__]
+        # Return CharField by default
+        return CharField
+
+    def get_field_names(self):
+        if self.Meta.list_display == auto:
+            # Get list_display from model
+            model_fields = self.Meta.model._meta.fields
+            return [f.name for f in model_fields]
+        else:
+            # Get list_display from Meta
+            return self.Meta.list_display
+
     def get_fields(self):
         fields = []
-        # Get pk field
-        model = self.Meta.model
-        field_object = IntegerField()
-        field_object.bind(model._meta.pk.name, self)
-        fields.append(field_object)
-        # Get all fields declared at ModelAdmin class
-        for attr_name in dir(self):
-            attr = getattr(self, attr_name, None)
-            if isinstance(attr, BaseField):
-                field_object = attr
-                # Bind "name" and "admin_model" info into field object
-                field_object.bind(attr_name, self)
-                # Append to result array
-                fields.append(field_object)
+        for field_name in self.get_field_names():
+            if hasattr(self, field_name):
+                # Get field define at ModelAdmin
+                field = getattr(self, field_name)
+            else:
+                # Create field from Model.field
+                model_field = self.Meta.model._meta.get_field(field_name)
+                field_class = self.get_mapped_field(model_field)
+                field = field_class()
+            # Bind "name" and "admin_model" info into field object
+            field.bind(field_name, self)
+            # Append to result array
+            fields.append(field)
         return fields
 
     def get_queryset(self):
         return self.Meta.model._default_manager.get_queryset()
-
-
-class AutoAdminModel(AdminModel):
-    def get_fields(self):
-        model = self.Meta.model
-
 
 
 def create_proxy_model(model, proxy_name):

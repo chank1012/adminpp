@@ -4,10 +4,7 @@ from post.models import Post, PostReply
 
 
 class PostAdminModel(admin_models.AdminModel):
-    title = admin_models.CharField()
-    content = admin_models.CharField()
     user = admin_models.CharField(source='author')
-    important = admin_models.BooleanField()
 
     class Meta:
         model = Post
@@ -25,4 +22,3 @@ class PostReplyAdminModel(admin_models.AdminModel):
 
 admin_models.adminpp_register(admin.site, PostAdminModel)
 admin_models.adminpp_register(admin.site, PostReplyAdminModel)
-
