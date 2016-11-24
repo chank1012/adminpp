@@ -4,9 +4,6 @@ from post.models import Post, PostReply
 
 
 class PostAdminModel(admin_models.AdminModel):
-    id = admin_models.IntegerField()
-    title = admin_models.CharField()
-    content = admin_models.CharField()
     user = admin_models.CharField(source='author')
 
     class Meta:
