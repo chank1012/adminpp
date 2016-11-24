@@ -1,7 +1,7 @@
 import sys
 from django.db import models
 from adminpp.builder import AdminBuilder
-from adminpp.renderers import BasicFieldRenderer
+from adminpp.renderers import get_default_renderer
 from adminpp.tags import Tag, VoidTag
 
 
@@ -13,9 +13,6 @@ class auto:
     pass
 
 
-default_renderer = BasicFieldRenderer()
-
-
 class BaseField(object):
     name = None  # name of the field (at AdminModel)
     model = None
@@ -24,13 +21,16 @@ class BaseField(object):
                  list_display=True,
                  renderer=None,
                  short_description=None,
-                 source=None):
+                 source=None,
+                 **kwargs):
         self.list_display = list_display
 
         # Set property objects
         self._renderer = renderer
         self._short_description = short_description
         self._source = source
+
+        self.kwargs = kwargs
 
     def bind(self, name, admin_model):
         self.name = name
@@ -40,7 +40,7 @@ class BaseField(object):
     @property
     def renderer(self):
         if self._renderer is None:
-            self._renderer = default_renderer
+            self._renderer = get_default_renderer()
         return self._renderer
 
     @property
@@ -78,11 +78,7 @@ class IntegerField(BaseField):
     pass
 
 
-class BaseTagField(BaseField):
-    pass
-
-
-class BooleanField(BaseTagField):
+class BooleanField(BaseField):
     def render(self, value):
         return self.renderer.render_boolean(value)
 
@@ -103,17 +99,15 @@ class MethodField(BaseField):
         return method(obj)
 
 
-class ImageField(BaseTagField):
-    # TODO
+class ImageField(BaseField):
     def render(self, value):
-        tag = VoidTag('img', src=value)
-        return self.renderer.render_text(tag)
+        tag = VoidTag('img', src=value, **self.kwargs)
+        return self.renderer.render_tag(tag)
 
 
 class DateTimeField(BaseField):
-    # TODO
     def render(self, value):
-        return str(value)
+        return self.renderer.render_datetime(value)
 
 
 class AdminModelMeta(type):
