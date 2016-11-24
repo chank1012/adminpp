@@ -165,7 +165,12 @@ class AdminModel(object):
 
     class Meta:
         list_display = auto
-        search_fields = auto
+
+    predefined_meta_fields = [
+        'model',
+        'list_display',
+        'proxy_name',
+    ]
 
     def get_mapped_field(self, model_field):
         # Given django.Model field, find appropriate admin_models.Field class
@@ -187,7 +192,7 @@ class AdminModel(object):
         fields = []
         for field_name in self.get_field_names():
             if hasattr(self, field_name):
-                # Get field define at ModelAdmin
+                # Get field defined at ModelAdmin
                 field = getattr(self, field_name)
             else:
                 # Create field from Model.field

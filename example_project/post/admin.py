@@ -8,6 +8,7 @@ class PostAdminModel(admin_models.AdminModel):
 
     class Meta:
         model = Post
+        search_fields = ['title', 'content']
 
     def get_queryset(self):
         return super(PostAdminModel, self).get_queryset()
