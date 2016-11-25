@@ -1,5 +1,6 @@
 from django.contrib import admin
 from adminpp import admin_models
+from adminpp.filters import get_titled_filter
 from post.models import Post, PostReply
 
 
@@ -15,6 +16,9 @@ class PostAdminModel(admin_models.AdminModel):
     class Meta:
         model = Post
         search_fields = ['title', 'content']
+        list_filter = [
+            ('title', get_titled_filter('Post title')),
+        ]
         proxy_name = 'PostProxy'
 
     def get_queryset(self):
