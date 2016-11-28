@@ -204,12 +204,6 @@ class AdminModel(object):
 
 
 def create_proxy_model(model, proxy_name):
-    # This function call should be bypassed under migration commands
-    # because proxy model creates dummy migration files.
-    # (Not very clever, but it works)
-    if 'makemigrations' in sys.argv or 'migrate' in sys.argv:
-        return model
-
     # http://stackoverflow.com/questions/2223375/multiple-modeladmins-views-for-same-model-in-django-admin
     class Meta:
         proxy = True
@@ -221,6 +215,12 @@ def create_proxy_model(model, proxy_name):
 
 
 def register(site, admin_model):
+    # This function call should be bypassed under migration commands
+    # because proxy model creates dummy migration files.
+    # (Not very clever, but it works)
+    if 'makemigrations' in sys.argv or 'migrate' in sys.argv:
+        return
+
     admin_class = AdminBuilder(admin_model).build()
     model = admin_model.Meta.model
 
