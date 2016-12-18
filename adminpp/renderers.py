@@ -5,9 +5,6 @@ from adminpp.utils import get_class_from_string
 
 
 class FieldRendererBase(object):
-    def render_tag(self, value):
-        return html.mark_safe(value)
-
     def render_text(self, value):
         raise NotImplementedError
 
@@ -22,8 +19,11 @@ class FieldRendererBase(object):
 
 
 class BasicFieldRenderer(FieldRendererBase):
-    def render_text(self, value):
-        return html.escape(value)
+    def render_text(self, value, allow_tags=False):
+        if allow_tags:
+            return html.mark_safe(value)
+        else:
+            return html.escape(value)
 
     def render_integer(self, value):
         return str(value)

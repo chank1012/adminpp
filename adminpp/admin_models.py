@@ -67,7 +67,8 @@ class BaseField(object):
         return getattr(obj, self.source)
 
     def render(self, value):
-        return self.renderer.render_text(value)
+        allow_tags = self.kwargs.get('allow_tags', False)
+        return self.renderer.render_text(value, allow_tags=allow_tags)
 
 
 class CharField(BaseField):
@@ -102,7 +103,7 @@ class MethodField(BaseField):
 class ImageField(BaseField):
     def render(self, value):
         tag = VoidTag('img', src=value, **self.kwargs)
-        return self.renderer.render_tag(tag)
+        return self.renderer.render_text(tag, allow_tags=True)
 
 
 class DateTimeField(BaseField):
